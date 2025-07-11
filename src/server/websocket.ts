@@ -1,26 +1,50 @@
-import { WebSocketServer } from "ws";
+import { WebSocket, WebSocketServer } from "ws";
 
 const wss = new WebSocketServer({ port: 8080 });
+const clients = new Map<
+  string,
+  { ws: WebSocket; docId: string; clientId: string }
+>(); // Map to store clients by clientId
 
-// simple in-memory store for documents
-const documents = new Map<string, string>();
+wss.on("connection", (ws: WebSocket) => {
+  let currentDocId: string;
+  let currentClientId: string;
 
-wss.on("connection", (ws) => {
-  console.log("New client connected");
+  ws.on("message", (message: string) => {
+    const { type, docId, clientId, content } = JSON.parse(message.toString());
 
-  ws.on("message", (message) => {
-    try {
-      const { docId, content, senderId } = JSON.parse(message.toString());
-      documents.set(docId, content);
+    if (type === "join") {
+      currentDocId = docId;
+      currentClientId = clientId;
+      clients.set(currentClientId, { ws, docId, clientId }); // Store the client with all info
+      console.log(`Client ${clientId} joined document ${docId}`);
+    }
 
-      // Broadcast to all clients except the sender
-      wss.clients.forEach((client) => {
-        if (client !== ws && client.readyState === client.OPEN) {
-          client.send(JSON.stringify({ content, senderId }));
+    if (type === "update") {
+      // Broadcast the update to all clients in the same document, except sender
+      clients.forEach((client, id) => {
+        if (
+          client.docId === currentDocId &&
+          id !== currentClientId &&
+          client.ws.readyState === WebSocket.OPEN
+        ) {
+          client.ws.send(
+            JSON.stringify({
+              type: "update",
+              content,
+              senderId: currentClientId,
+            })
+          );
         }
       });
-    } catch (error) {
-      console.error("Error processing message:", error);
+    }
+  });
+
+  ws.on("close", () => {
+    // Remove the client from the map when they disconnect
+    if (currentClientId) {
+      clients.delete(currentClientId);
+      console.log(`Client ${currentClientId} disconnected`);
     }
   });
 });
