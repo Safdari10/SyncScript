@@ -2,8 +2,8 @@ import "@/styles/global.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Collaborative Editor",
-  description: "Real-time document collaboration",
+  title: "SyncScript",
+  description: "Real-time collaborative code editor",
 };
 
 export default function RootLayout({
