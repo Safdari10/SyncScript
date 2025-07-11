@@ -1,47 +1,85 @@
 "use client";
-import { useDocumentStore } from "@/stores/document";
-import { useEffect, useRef } from "react";
+
+import { useRef, useEffect, useState } from "react";
 
 export default function Editor({ docId }: { docId: string }) {
-  const { content, setContent, clientId } = useDocumentStore();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [content, setContent] = useState("");
+  const [clientId, setClientId] = useState<string>("");
+  const wsRef = useRef<WebSocket | null>(null);
 
-  // WebSocket connect
-  //! todo: enhance futher later
+  // Generate clientId on client side only
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8080");
+    setClientId(Math.random().toString(36).substring(2, 10));
+  }, []);
 
-    ws.onmessage = (event) => {
-      const { content: newContent, senderId } = JSON.parse(event.data);
-      if (senderId !== clientId) {
+  // Initialize WebSocket connection
+  useEffect(() => {
+    if (!clientId) return; // Wait for clientId to be set
+    
+    const socket = new WebSocket("ws://localhost:8080");
+    wsRef.current = socket;
+
+    socket.onopen = () => {
+      console.log("WebSocket connected");
+      // Send initial join message
+      socket.send(
+        JSON.stringify({
+          type: "join",
+          docId,
+          clientId,
+        })
+      );
+    };
+
+    socket.onmessage = (event) => {
+      const { type, content: newContent, senderId } = JSON.parse(event.data);
+      if (type === "update" && senderId !== clientId) {
         setContent(newContent);
       }
     };
-    return () => ws.close();
-  }, [docId, clientId, setContent]);
 
+    socket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    socket.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, [docId, clientId]);
+
+  // Handle content changes
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
     setContent(newContent);
 
-    // Temporary broad - todo: replace with OT later
-    const ws = new WebSocket("ws://localhost:8080");
-    ws.send(
-      JSON.stringify({
-        docId,
-        content: newContent,
-        senderId: clientId,
-      })
-    );
+    // Only send if connection is ready
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "update",
+          docId,
+          content: newContent,
+          senderId: clientId,
+        })
+      );
+    }
   };
 
   return (
-    <textarea
-      ref={textareaRef}
-      value={content}
-      onChange={handleChange}
-      className="w-full h-screen p-4 text-lg focus:outline-none resize-none"
-      placeholder="Start typing collaboratively..."
-    />
+    <div className="flex flex-col h-full">
+      <div className="p-2 bg-gray-100 text-sm">
+        Connected as: <span className="font-mono">{clientId || "Connecting..."}</span>
+      </div>
+      <textarea
+        value={content}
+        onChange={handleChange}
+        className="flex-1 p-4 text-lg border-none focus:outline-none resize-none"
+        placeholder="Start typing..."
+      />
+    </div>
   );
 }
