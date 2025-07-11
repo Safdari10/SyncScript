@@ -8,9 +8,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "ws": "ts-node src/server/websocket.ts",
-    "dev:all": "concurrently \"npm run dev\" \"npm run ws\"",
-    "typecheck": "tsc --noEmit"
+    "ws": "tsx src/server/websocket.ts",
+    "typecheck": "npm run typecheck:frontend && npm run typecheck:backend",
+    "typecheck:frontend": "tsc --project tsconfig.json --noEmit",
+    "typecheck:backend": "tsc --project tsconfig.backend.json --noEmit"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
@@ -36,6 +37,7 @@
     "eslint-config-next": "15.3.5",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
+    "tsx": "^4.20.3",
     "typescript": "^5"
   }
 }
