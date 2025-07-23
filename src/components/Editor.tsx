@@ -40,7 +40,7 @@ export default function Editor({ docId }: { docId: string }) {
         setContent((current) => {
           const updated = applyOperation(current, op);
           prevContentRef.current = updated;
-          versionRef.current += 1;
+          versionRef.current = op.version ?? versionRef.current; // Use remote version if available
           return updated;
         });
       }
