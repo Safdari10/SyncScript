@@ -1,4 +1,4 @@
-type Operation =
+export type Operation =
   | { type: "insert"; pos: number; text: string; version: number }
   | { type: "delete"; pos: number; length: number; version: number };
 
