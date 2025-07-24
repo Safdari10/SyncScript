@@ -35,12 +35,21 @@ export default function Editor({ docId }: { docId: string }) {
     };
 
     socket.onmessage = (event) => {
-      const { type, op, senderId } = JSON.parse(event.data);
-      if (type === "operation" && senderId !== clientId && op) {
+      const data = JSON.parse(event.data);
+
+      // Handle Document load from server
+      if (data.type === "load") {
+        setContent(data.content);
+        versionRef.current = data.version;
+        prevContentRef.current = data.content;
+      }
+
+      // Handle OT Operations from other clients
+      if (data.type === "operation" && data.senderId !== clientId && data.op) {
         setContent((current) => {
-          const updated = applyOperation(current, op);
+          const updated = applyOperation(current, data.op);
           prevContentRef.current = updated;
-          versionRef.current = op.version ?? versionRef.current; // Use remote version if available
+          versionRef.current = data.op.version ?? versionRef.current; // Use remote version if available
           return updated;
         });
       }
