@@ -1,5 +1,6 @@
 import { WebSocket, WebSocketServer } from "ws";
-import { Operation, transform } from "@/lib/ot";
+import { applyOperation, Operation, transform } from "@/lib/ot";
+import prisma from "@/lib/db";
 
 const wss = new WebSocketServer({ port: 8080 });
 const clients = new Map<
@@ -14,7 +15,7 @@ wss.on("connection", (ws: WebSocket) => {
   let currentDocId: string;
   let currentClientId: string;
 
-  ws.on("message", (message: string) => {
+  ws.on("message", async (message: string) => {
     try {
       const { type, docId, clientId, op, version } = JSON.parse(
         message.toString()
@@ -26,6 +27,20 @@ wss.on("connection", (ws: WebSocket) => {
         clients.set(currentClientId, { ws, docId, clientId }); // Store the client with all info
         if (!docOps.has(docId)) {
           docOps.set(docId, []); // Initialize operations for this document
+        }
+
+        // Prisma: Load document content and version if it exists
+        const doc = await prisma.document.findUnique({
+          where: { id: docId },
+        });
+        if (doc) {
+          ws.send(
+            JSON.stringify({
+              type: "load",
+              content: doc.content,
+              version: doc.version,
+            })
+          );
         }
         console.log(`Client ${clientId} joined document ${docId}`);
         return;
@@ -47,7 +62,28 @@ wss.on("connection", (ws: WebSocket) => {
 
         // update state
         docVersions.set(docId, version);
-        docOps.set(docId, [...ops.slice(-49), transformedOp]); // Keep last 50 operations
+        const updatedOps = [...ops.slice(-49), transformedOp]; // Keep last 50 operations
+        docOps.set(docId, updatedOps);
+
+        // Prisma: Auto-save every 10 operations
+        if (updatedOps.length % 10 === 0) {
+          const currentContent = updatedOps.reduce(
+            (text, op) => applyOperation(text, op),
+            ""
+          );
+          await prisma.document.upsert({
+            where: { id: docId },
+            update: {
+              content: currentContent,
+              version: op.version,
+            },
+            create: {
+              id: docId,
+              content: currentContent,
+              version: op.version,
+            },
+          });
+        }
 
         // Broadcast the update to all clients in the same document, except sender
         clients.forEach((client, id) => {
