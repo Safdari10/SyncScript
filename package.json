@@ -11,9 +11,12 @@
     "ws": "tsx src/server/websocket.ts",
     "typecheck": "npm run typecheck:frontend && npm run typecheck:backend",
     "typecheck:frontend": "tsc --project tsconfig.json --noEmit",
-    "typecheck:backend": "tsc --project tsconfig.backend.json --noEmit"
+    "typecheck:backend": "tsc --project tsconfig.backend.json --noEmit",
+    "migrate": "prisma migrate dev --name init_documents",
+    "studio": "prisma studio"
   },
   "dependencies": {
+    "@prisma/client": "^6.11.1",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-tooltip": "^1.2.7",
     "@types/ws": "^8.18.1",
