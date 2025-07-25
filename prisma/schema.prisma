@@ -9,10 +9,20 @@ generator client {
 }
 
 
-model document {
-    id  String @id @default(uuid())
-    content String
-    version Int   @default(0)
+model DocumentVersion {
+    id         String @id
+    content    String
+    version    Int
+    createdAt  DateTime @default(now())
+    document   Document @relation(fields: [documentId], references: [id])
+    documentId String
+}
+
+model Document {
+    id        String @id @default(uuid())
+    content   String
+    version   Int   @default(0)
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+    versions  DocumentVersion[]
 }
