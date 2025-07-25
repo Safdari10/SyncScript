@@ -12,7 +12,7 @@
     "typecheck": "npm run typecheck:frontend && npm run typecheck:backend",
     "typecheck:frontend": "tsc --project tsconfig.json --noEmit",
     "typecheck:backend": "tsc --project tsconfig.backend.json --noEmit",
-    "migrate": "prisma migrate dev --name init_documents",
+    "migrate": "prisma migrate dev --name init_documents && prisma generate",
     "studio": "prisma studio"
   },
   "dependencies": {
