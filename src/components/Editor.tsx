@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { applyOperation, Operation } from "@/lib/ot";
+import { VersionHistory } from "./VersionHistory";
 
 export default function Editor({ docId }: { docId: string }) {
   const [content, setContent] = useState("");
@@ -123,6 +124,7 @@ export default function Editor({ docId }: { docId: string }) {
         className="flex-1 p-4 text-lg border-none focus:outline-none resize-none"
         placeholder="Start typing..."
       />
+      <VersionHistory documentId={docId} />
     </div>
   );
 }
