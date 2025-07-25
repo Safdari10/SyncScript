@@ -5,21 +5,25 @@ import { VersionHistoryProp, DocumentVersionSummary } from "@/types/types";
 
 export const VersionHistory = ({ documentId }: VersionHistoryProp) => {
   const [versions, setVersions] = useState<DocumentVersionSummary[]>([]);
+  const [loading, setLoading] = useState(false)
 
   const loadVersions = async () => {
+    setLoading(true)
     try {
       const res = await fetch(`/api/documents/${documentId}/versions`);
       if (!res.ok) throw new Error("Failed to load versions");
       setVersions(await res.json());
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false)
     }
   };
 
   return (
     <div className="border-l p-4">
       <button onClick={loadVersions} className="mb-4 p-2 bg-gray-100 rounded">
-        View History
+        {loading ? "loading..." : "View History"}
       </button>
       <ul>
         {versions.map((v) => (
