@@ -1,6 +1,7 @@
 import { WebSocket, WebSocketServer } from "ws";
-import { applyOperation, Operation, transform } from "@/lib/ot";
 import prisma from "@/lib/db";
+import { applyOperation, Operation, transform } from "@/lib/ot";
+import { saveVersion } from "@/lib/versioning";
 
 const wss = new WebSocketServer({ port: 8080 });
 const clients = new Map<
@@ -71,18 +72,24 @@ wss.on("connection", (ws: WebSocket) => {
             (text, op) => applyOperation(text, op),
             ""
           );
-          await prisma.document.upsert({
-            where: { id: docId },
-            update: {
-              content: currentContent,
-              version: op.version,
-            },
-            create: {
-              id: docId,
-              content: currentContent,
-              version: op.version,
-            },
-          });
+
+          await prisma.$transaction([
+            prisma.document.upsert({
+              where: { id: docId },
+              update: {
+                content: currentContent,
+                version: op.version,
+              },
+              create: {
+                id: docId,
+                content: currentContent,
+                version: op.version,
+              },
+            }),
+          ]);
+
+          // Save version outside the transaction
+          await saveVersion(docId, currentContent, op.version);
         }
 
         // Broadcast the update to all clients in the same document, except sender
