@@ -2,6 +2,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import prisma from "@/lib/db";
 import { applyOperation, Operation, transform } from "@/lib/ot";
 import { saveVersion } from "@/lib/versioning";
+import { v4 as uuidv4 } from "uuid";
 
 const wss = new WebSocketServer({ port: 8080 });
 const clients = new Map<
@@ -74,6 +75,7 @@ wss.on("connection", (ws: WebSocket) => {
           );
 
           await prisma.$transaction([
+            // 1. Upsert the main document
             prisma.document.upsert({
               where: { id: docId },
               update: {
@@ -84,6 +86,16 @@ wss.on("connection", (ws: WebSocket) => {
                 id: docId,
                 content: currentContent,
                 version: op.version,
+              },
+            }),
+
+            // 2. Save a new version snapshot
+            prisma.documentVersion.create({
+              data: {
+                id: uuidv4(),
+                content: currentContent,
+                version: op.version,
+                documentId: docId,
               },
             }),
           ]);
