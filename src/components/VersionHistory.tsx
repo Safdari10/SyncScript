@@ -31,7 +31,7 @@ export const VersionHistory = ({ documentId }: VersionHistoryProp) => {
       {error && <div className="text-red-500 mb-2">{error}</div>}
       <ul>
         {versions.map((v) => (
-          <li key={v.version} className="py-2 border-b">
+          <li key={`${v.version} - ${v.createdAt}`} className="py-2 border-b">
             <span className="font-mono">v{v.version}</span>
             <span className="text-sm text-gray-500 ml-4">
               {new Date(v.createdAt).toLocaleString()}
