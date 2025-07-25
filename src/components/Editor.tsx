@@ -1,13 +1,13 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { applyOperation, Operation } from "@/lib/ot";
+import { Operation } from "@/lib/ot";
+import useDocumentWebSocket from "@/hooks/useDocumentWebSocket";
 import { VersionHistory } from "./VersionHistory";
 
 export default function Editor({ docId }: { docId: string }) {
   const [content, setContent] = useState("");
   const [clientId, setClientId] = useState<string>("");
-  const wsRef = useRef<WebSocket | null>(null);
   const versionRef = useRef(0);
   const prevContentRef = useRef("");
 
@@ -17,57 +17,13 @@ export default function Editor({ docId }: { docId: string }) {
   }, []);
 
   // Initialize WebSocket connection
-  useEffect(() => {
-    if (!clientId) return; // Wait for clientId to be set
-
-    const socket = new WebSocket("ws://localhost:8080");
-    wsRef.current = socket;
-
-    socket.onopen = () => {
-      console.log("WebSocket connected");
-      // Send initial join message
-      socket.send(
-        JSON.stringify({
-          type: "join",
-          docId,
-          clientId,
-        })
-      );
-    };
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-
-      // Handle Document load from server
-      if (data.type === "load") {
-        setContent(data.content);
-        versionRef.current = data.version;
-        prevContentRef.current = data.content;
-      }
-
-      // Handle OT Operations from other clients
-      if (data.type === "operation" && data.senderId !== clientId && data.op) {
-        setContent((current) => {
-          const updated = applyOperation(current, data.op);
-          prevContentRef.current = updated;
-          versionRef.current = data.op.version ?? versionRef.current; // Use remote version if available
-          return updated;
-        });
-      }
-    };
-
-    socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-
-    socket.onclose = () => {
-      console.log("WebSocket disconnected");
-    };
-
-    return () => {
-      socket.close();
-    };
-  }, [docId, clientId]);
+  const wsRef = useDocumentWebSocket({
+    clientId,
+    docId,
+    setContent,
+    versionRef,
+    prevContentRef,
+  });
 
   // Handle content changes
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
