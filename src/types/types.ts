@@ -6,3 +6,9 @@ export type DocumentVersionSummary = {
 export interface VersionHistoryProp {
   documentId: string;
 }
+
+export type DocumentVersionsRouteParams = {
+  params: {
+    id: string;
+  };
+};
